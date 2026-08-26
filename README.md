@@ -1,3 +1,4 @@
+markdown
 # CLYVO VET — Agente de IA do Bebedouro Inteligente
 
 Componente de Inteligência Artificial da disciplina **Disruptive
@@ -18,6 +19,7 @@ Projeto original (Sprint 1 e 2 — hardware e dashboard):
 ## Entrega — Sprint 3
 
 - Vídeo pitch: [colar aqui o link do YouTube]
+- Documentação completa (problema, abordagem de IA, dados utilizados): [documentacao_bebedouro.md](./documentacao_bebedouro.md)
 - Diagrama de arquitetura: [diagrama_arquitetura.svg](./diagrama_arquitetura.svg)
 
 ## O que este agente faz
@@ -64,7 +66,7 @@ python agente_bebedouro.py mqtt
 ├── agente_bebedouro.py # Script principal do agente
 ├── dataset_historico.json # Dados simulados de consumo (7 dias)
 ├── requirements.txt # Dependências Python
-├── documentacao_ia.md # Problema, abordagem e dados (Sprint 3)
+├── documentacao_bebedouro.md # Problema, abordagem e dados (Sprint 3)
 ├── diagrama_arquitetura.svg # Diagrama arquitetural
 └── README.md # Este arquivo
 
