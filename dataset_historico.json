@@ -1,0 +1,18 @@
+{
+  "pet": {
+    "nome": "Rex",
+    "especie": "cachorro",
+    "peso_kg": 12
+  },
+  "historico_consumo_diario_ml": [
+    {"data": "2026-08-09", "consumo_ml": 780, "temp_media_c": 24},
+    {"data": "2026-08-10", "consumo_ml": 810, "temp_media_c": 25},
+    {"data": "2026-08-11", "consumo_ml": 795, "temp_media_c": 23},
+    {"data": "2026-08-12", "consumo_ml": 820, "temp_media_c": 26},
+    {"data": "2026-08-13", "consumo_ml": 805, "temp_media_c": 24},
+    {"data": "2026-08-14", "consumo_ml": 790, "temp_media_c": 25},
+    {"data": "2026-08-15", "consumo_ml": 815, "temp_media_c": 24}
+  ],
+  "consumo_hoje_ml": 480,
+  "temp_hoje_c": 31
+}
