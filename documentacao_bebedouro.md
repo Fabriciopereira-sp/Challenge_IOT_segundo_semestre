@@ -10,9 +10,9 @@ pode indicar desidratação, início de doenças renais ou outros problemas
 de saúde — muitas vezes antes que o tutor perceba qualquer sintoma
 visível.
 
-O problema que a IA resolve é: **detectar automaticamente quando o
+O problema que a IA resolve é: detectar automaticamente quando o
 consumo de água de um pet está significativamente abaixo do seu padrão
-habitual, e comunicar isso ao tutor de forma clara e imediata**, para que
+habitual, e comunicar isso ao tutor de forma clara e imediata, para que
 ele possa agir (levar ao veterinário, verificar o ambiente, checar se o
 pet está doente) antes que o quadro se agrave.
 

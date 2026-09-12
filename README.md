@@ -22,7 +22,7 @@ Componente de Inteligência Artificial da disciplina **Disruptive Architectures:
 
 | Item | Link |
 |---|---|
-| 🎥 Vídeo pitch | [colar aqui o link do YouTube] |
+| 🎥 Vídeo pitch | [https://youtu.be/Jtuh3-_sWXM] |
 | 📄 Documentação completa | [documentacao_bebedouro.md](./documentacao_bebedouro.md) |
 | 🗺️ Diagrama de arquitetura | [diagrama_arquitetura.svg](./diagrama_arquitetura.svg) |
 
