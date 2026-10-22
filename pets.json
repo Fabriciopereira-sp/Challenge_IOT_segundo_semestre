@@ -1,0 +1,22 @@
+{
+  "rex": {
+    "nome": "Rex",
+    "especie": "cachorro",
+    "raca": "Labrador",
+    "idade_anos": 9,
+    "peso_kg": 30,
+    "condicoes": [],
+    "medicacoes": [],
+    "historico_dias_ml": [1450, 1520, 1480, 1550, 1500, 1470, 1530]
+  },
+  "mimi": {
+    "nome": "Mimi",
+    "especie": "gato",
+    "raca": "SRD",
+    "idade_anos": 12,
+    "peso_kg": 4.5,
+    "condicoes": ["doença renal crônica em acompanhamento"],
+    "medicacoes": ["benazepril (prescrição veterinária)"],
+    "historico_dias_ml": [210, 225, 218, 230, 222, 215, 228]
+  }
+}
