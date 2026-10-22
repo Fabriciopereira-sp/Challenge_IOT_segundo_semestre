@@ -7,7 +7,7 @@ ML_POR_KG_DIA = 50.0        # referência geral de consumo diário (ajustar com 
 QUEDA_PCT = 30
 AUMENTO_PCT = 50
 Z_MIN = 2.0
-HORAS_SEM_CONSUMO = 8
+HORAS_SEM_CONSUMO = 12      # a noite o pet fica ~9h sem beber, isso é normal
 NIVEL_COM_AGUA_ML = 100     # abaixo disso o pote está praticamente vazio
 
 
@@ -87,6 +87,9 @@ def alerta_pote_vazio(nivel_ml):
     return nivel_ml < NIVEL_COM_AGUA_ML
 
 
+ORDEM_GRAVIDADE = {"nenhuma": 0, "leve": 1, "moderada": 2, "alta": 3}
+
+
 class Gatilho:
     # decide quando avaliar (por tempo) e quando vale alertar (sem spam)
 
@@ -95,7 +98,8 @@ class Gatilho:
         self.cooldown_s = cooldown_s
         self.ultima_avaliacao = None
         self.ultimo_alerta = None
-        self.ultimo_status = "normal"
+        self.status_alertado = None
+        self.gravidade_alertada = "nenhuma"
 
     def deve_avaliar(self, agora):
         if self.ultima_avaliacao is None:
@@ -105,18 +109,24 @@ class Gatilho:
     def deve_alertar(self, agora, avaliacao):
         self.ultima_avaliacao = agora
 
+        # um "normal" passageiro não apaga o último alerta, senão o consumo
+        # oscilando perto do limite geraria alerta toda hora
         if avaliacao.status == "normal":
-            self.ultimo_status = "normal"
             return False
 
-        mudou = avaliacao.status != self.ultimo_status
+        mudou = avaliacao.status != self.status_alertado
+        piorou = (
+            ORDEM_GRAVIDADE[avaliacao.gravidade]
+            > ORDEM_GRAVIDADE[self.gravidade_alertada]
+        )
         fora_do_cooldown = (
             self.ultimo_alerta is None
             or agora - self.ultimo_alerta >= self.cooldown_s
         )
-        self.ultimo_status = avaliacao.status
 
-        if mudou or fora_do_cooldown:
+        if mudou or piorou or fora_do_cooldown:
             self.ultimo_alerta = agora
+            self.status_alertado = avaliacao.status
+            self.gravidade_alertada = avaliacao.gravidade
             return True
         return False

@@ -64,16 +64,16 @@ class TestDetector(unittest.TestCase):
 
     def test_pote_cheio_sem_consumo_alerta_sem_nunca_ficar_vazio(self):
         r = RastreadorConsumo()
-        pontos = [(h * 3600, 700) for h in range(0, 11)]
+        pontos = [(h * 3600, 700) for h in range(0, 14)]
         alimentar(r, pontos)
-        agora = 10 * 3600
+        agora = 13 * 3600
         self.assertFalse(alerta_pote_vazio(r.nivel_ml))
         a = avaliar(r.consumo_janela(agora), [800] * 7, 12,
                     r.horas_sem_consumo(agora), r.nivel_ml)
         self.assertEqual(a.status, "sem_consumo")
 
     def test_pote_vazio_nao_e_tratado_como_sem_consumo(self):
-        a = avaliar(300, [800] * 7, 12, 10.0, 20)
+        a = avaliar(300, [800] * 7, 12, 14.0, 20)
         self.assertNotEqual(a.status, "sem_consumo")
 
 
@@ -87,6 +87,25 @@ class TestGatilho(unittest.TestCase):
         self.assertTrue(g.deve_avaliar(300))
         self.assertFalse(g.deve_alertar(300, a))     # mesmo status, dentro do cooldown
         self.assertTrue(g.deve_alertar(4000, a))     # passou o cooldown
+
+    def test_oscilacao_perto_do_limite_nao_gera_alerta_repetido(self):
+        g = Gatilho(intervalo_s=300, cooldown_s=6 * 3600)
+        queda = avaliar(250, [800] * 7, 12, 1.0, 500)
+        normal = avaliar(780, [800] * 7, 12, 1.0, 500)
+        alertas = 0
+        for i, av in enumerate([queda, normal, queda, normal, queda]):
+            if g.deve_alertar(i * 1800, av):
+                alertas += 1
+        self.assertEqual(alertas, 1)
+
+    def test_gravidade_pior_alerta_mesmo_dentro_do_cooldown(self):
+        g = Gatilho(intervalo_s=300, cooldown_s=6 * 3600)
+        leve = avaliar(1000, [1500] * 7, 30, 1.0, 500)
+        grave = avaliar(300, [1500] * 7, 30, 1.0, 500)
+        self.assertEqual(leve.gravidade, "leve")
+        self.assertEqual(grave.gravidade, "alta")
+        self.assertTrue(g.deve_alertar(0, leve))
+        self.assertTrue(g.deve_alertar(1800, grave))
 
 
 if __name__ == "__main__":
