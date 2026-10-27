@@ -6,6 +6,7 @@ import paho.mqtt.client as mqtt
 
 import llm
 from consumo import RastreadorConsumo
+from db import Repositorio
 from detector import Gatilho, alerta_pote_vazio, avaliar
 
 MQTT_BROKER = "broker.hivemq.com"
@@ -24,18 +25,24 @@ def topico(nome):
 
 def carregar_pet(nome="rex", caminho="pets.json"):
     with open(caminho, encoding="utf-8") as f:
-        return json.load(f)[nome]
+        pet = json.load(f)[nome]
+    pet["id"] = nome
+    return pet
 
 
 class Agente:
-    def __init__(self, pet, analisar=llm.analisar, gatilho=None):
+    def __init__(self, pet, analisar=llm.analisar, gatilho=None, repo=None):
         self.pet = pet
+        self.repo = repo
         self.historico = list(pet.get("historico_dias_ml", []))
+        if repo is not None:
+            self.historico = repo.historico(pet["id"]) or self.historico
         self.rastreador = RastreadorConsumo()
         self.gatilho = gatilho or Gatilho()
         self.analisar = analisar
         self.temperatura = None
         self.dia_atual = None
+        self._eventos_salvos = 0
 
     def receber_temperatura(self, valor):
         self.temperatura = valor
@@ -44,6 +51,7 @@ class Agente:
         # cada leitura atualiza o consumo, mas a avaliação é por tempo
         # e não depende do nível estar vazio
         self.rastreador.leitura(ts, dist_cm)
+        self._salvar_eventos_novos()
         self._fechar_dia(ts)
 
         if not self.gatilho.deve_avaliar(ts):
@@ -52,6 +60,13 @@ class Agente:
 
     def _horas_observadas(self, ts):
         return (ts - self.rastreador.primeiro_ts) / 3600
+
+    def _salvar_eventos_novos(self):
+        if self.repo is None:
+            return
+        for e in self.rastreador.eventos[self._eventos_salvos:]:
+            self.repo.salvar_evento(self.pet["id"], e.ts, e.tipo, e.ml)
+        self._eventos_salvos = len(self.rastreador.eventos)
 
     def _fechar_dia(self, ts):
         # na virada do dia o consumo das últimas 24h entra no histórico
@@ -62,8 +77,11 @@ class Agente:
 
         if dia != self.dia_atual:
             if self._horas_observadas(ts) >= HORAS_AQUECIMENTO:
-                self.historico.append(self.rastreador.consumo_janela(ts))
+                consumo = self.rastreador.consumo_janela(ts)
+                self.historico.append(consumo)
                 self.historico = self.historico[-MAX_DIAS_HISTORICO:]
+                if self.repo is not None:
+                    self.repo.salvar_dia(self.pet["id"], consumo)
             self.dia_atual = dia
 
     def _reabastecimentos_24h(self, ts):
@@ -73,7 +91,16 @@ class Agente:
             if e.tipo == "reabastecimento" and e.ts >= inicio
         )
 
+    def _atualizar_perfil(self):
+        # a clínica pode mudar peso, condições e medicações pela API
+        if self.repo is None:
+            return
+        atual = self.repo.perfil(self.pet["id"])
+        if atual:
+            self.pet = {**self.pet, **atual}
+
     def _avaliar(self, ts):
+        self._atualizar_perfil()
         r = self.rastreador
         av = avaliar(
             r.consumo_janela(ts), self.historico, self.pet["peso_kg"],
@@ -87,9 +114,9 @@ class Agente:
         )
         if coletando:
             self.gatilho.ultima_avaliacao = ts
-            return [("ia_estado", self._estado(ts, av, "coletando_dados"))]
+            return [self._registrar_estado(ts, av, "coletando_dados")]
 
-        saidas = [("ia_estado", self._estado(ts, av, av.status))]
+        saidas = [self._registrar_estado(ts, av, av.status)]
 
         if self.gatilho.deve_alertar(ts, av):
             contexto = {
@@ -98,9 +125,18 @@ class Agente:
                 "horas_observadas": round(self._horas_observadas(ts), 1),
             }
             analise = self.analisar(av, self.pet, contexto)
-            saidas.append(("ia_alerta", self._alerta(ts, av, analise)))
+            alerta = self._alerta(ts, av, analise)
+            if self.repo is not None:
+                self.repo.salvar_alerta(self.pet["id"], alerta)
+            saidas.append(("ia_alerta", alerta))
 
         return saidas
+
+    def _registrar_estado(self, ts, av, status):
+        estado = self._estado(ts, av, status)
+        if self.repo is not None:
+            self.repo.salvar_estado(self.pet["id"], ts, estado)
+        return ("ia_estado", estado)
 
     def _estado(self, ts, av, status):
         return {
@@ -145,8 +181,8 @@ def ler_valor(payload):
         return None, None
 
 
-def rodar_mqtt(pet):
-    agente = Agente(pet)
+def rodar_mqtt(pet, repo):
+    agente = Agente(pet, repo=repo)
 
     def on_connect(client, userdata, flags, rc):
         print(f"[MQTT] conectado ao {MQTT_BROKER} (codigo {rc})")
@@ -181,5 +217,13 @@ def rodar_mqtt(pet):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--pet", default="rex", help="chave do pet no pets.json")
+    parser.add_argument("--reiniciar", action="store_true",
+                        help="apaga o que foi medido antes de começar (bom para demonstração)")
     args = parser.parse_args()
-    rodar_mqtt(carregar_pet(args.pet))
+
+    repo = Repositorio()
+    repo.semear_pets()
+    pet = carregar_pet(args.pet)
+    if args.reiniciar:
+        repo.reiniciar(pet["id"])
+    rodar_mqtt(pet, repo)

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from dataclasses import asdict, is_dataclass
 
 import requests
@@ -13,6 +14,18 @@ IDADE_SENIOR = 8
 
 # sintomas que a LLM não pode citar se não estiverem no perfil do pet
 TERMOS_SEM_BASE = ("diarre", "vômit", "vomit", "febre", "convuls")
+
+# o tutor nunca deve ser orientado a mexer em medicação por conta própria
+ORIENTA_MEDICACAO = re.compile(
+    r"(ajust|revis|troc|suspend|alter|aument|reduz|diminu)\w*\s+(a\s+|da\s+|de\s+|na\s+)?(medica|dose)",
+    re.IGNORECASE,
+)
+# palavras coladas por modelo pequeno: maiúscula no meio ou prefixo grudado
+PALAVRA_COLADA = re.compile(
+    r"[a-zà-ú][A-ZÀ-Ú]"
+    r"|\b(a|e|o|em|de|do|da|no|na)(medica|rotina|condic|condiç|consumo|água|agua|efeito)\w*"
+    r"|\b\w{18,}\b",
+)
 
 DIRECAO = {
     "queda": "consumo ABAIXO do esperado",
@@ -30,7 +43,10 @@ SISTEMA = (
     "dados que não estejam no JSON. Não faça diagnóstico. O campo direcao diz se o "
     "consumo está abaixo ou acima do esperado, nunca inverta isso. Escreva em "
     "português correto, com espaço entre todas as palavras. Não repita estas "
-    "instruções. Só recomende procurar o veterinário se a gravidade for alta. "
+    "instruções. NUNCA sugira ajustar, revisar, trocar, aumentar, reduzir ou suspender "
+    "medicação ou dose: se houver medicação registrada, diga apenas que o veterinário "
+    "deve ser consultado sobre ela. Só recomende procurar o veterinário se a gravidade "
+    "for alta. "
     'Responda apenas com JSON neste formato: {"causas_provaveis": [{"id": "...", '
     '"justificativa": "..."}], "perguntas_ao_tutor": ["..."], "acao_recomendada": '
     '"...", "mensagem_tutor": "até 3 frases", "resumo_clinica": "até 3 frases"}'
@@ -138,14 +154,14 @@ def _evidencias(a, pet, contexto, cands):
     }
 
 
-def _chamar_ollama(evidencias):
+def _chamar_ollama(evidencias, temperatura=0.2):
     resposta = requests.post(
         OLLAMA_URL,
         json={
             "model": OLLAMA_MODEL,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0.2, "num_predict": 700},
+            "options": {"temperature": temperatura, "num_predict": 700},
             "messages": [
                 {"role": "system", "content": SISTEMA},
                 {"role": "user", "content": json.dumps(evidencias, ensure_ascii=False, indent=2)},
@@ -168,6 +184,17 @@ def _tem_termo_sem_base(textos, pet):
         if "medica" in baixo and not pet.get("medicacoes"):
             return True
     return False
+
+
+def _texto_com_defeito(textos_tutor, todos):
+    # devolve o motivo se o texto tiver orientação de risco ou palavras coladas
+    for t in textos_tutor:
+        if ORIENTA_MEDICACAO.search(t):
+            return "orienta_medicacao"
+    for t in todos:
+        if PALAVRA_COLADA.search(t):
+            return "palavras_coladas"
+    return None
 
 
 def _validar(bruto, cands, pet):
@@ -213,6 +240,12 @@ def _validar(bruto, cands, pet):
     if _tem_termo_sem_base(todos, pet):
         return None, "termo_sem_base"
 
+    defeito = _texto_com_defeito(
+        [textos["mensagem_tutor"], textos["acao_recomendada"]] + perguntas_ok, todos
+    )
+    if defeito:
+        return None, defeito
+
     resposta = {"causas_provaveis": causas_ok, "perguntas_ao_tutor": perguntas_ok, **textos}
     return resposta, "ok"
 
@@ -253,14 +286,17 @@ def analisar(avaliacao, pet, contexto):
     cands = candidatos(a, pet, contexto)
     motivo = "ok"
 
-    try:
-        bruto = _chamar_ollama(_evidencias(a, pet, contexto, cands))
-        valido, motivo = _validar(bruto, cands, pet)
-        if valido:
-            return {**valido, "origem": "llm"}
-    except requests.RequestException:
-        motivo = "ollama_indisponivel"
-    except (ValueError, KeyError):
-        motivo = "json_invalido"
+    evidencias = _evidencias(a, pet, contexto, cands)
+    for temperatura in (0.2, 0.5):
+        try:
+            bruto = _chamar_ollama(evidencias, temperatura)
+            valido, motivo = _validar(bruto, cands, pet)
+            if valido:
+                return {**valido, "origem": "llm"}
+        except requests.RequestException:
+            motivo = "ollama_indisponivel"
+            break
+        except (ValueError, KeyError):
+            motivo = "json_invalido"
 
     return {**_padrao(a, pet, cands), "origem": "padrao", "motivo_padrao": motivo}
