@@ -17,7 +17,9 @@ TERMOS_SEM_BASE = ("diarre", "vômit", "vomit", "febre", "convuls")
 
 # o tutor nunca deve ser orientado a mexer em medicação por conta própria
 ORIENTA_MEDICACAO = re.compile(
-    r"(ajust|revis|troc|suspend|alter|aument|reduz|diminu)\w*\s+(a\s+|da\s+|de\s+|na\s+)?(medica|dose)",
+    r"\b(ajust(e|ar|ando|á-la|á-lo)|revis(e|ar|ando)|troc(e|ar|ando)|suspend(a|er|endo)"
+    r"|interromp(a|er)|aument(e|ar)|reduz(a|ir)|diminu(a|ir))\b"
+    r"[^.!?]{0,25}\b(medica\w*|dose\w*|rem[eé]dio\w*)",
     re.IGNORECASE,
 )
 # palavras coladas por modelo pequeno: maiúscula no meio ou prefixo grudado
@@ -189,11 +191,13 @@ def _tem_termo_sem_base(textos, pet):
 def _texto_com_defeito(textos_tutor, todos):
     # devolve o motivo se o texto tiver orientação de risco ou palavras coladas
     for t in textos_tutor:
-        if ORIENTA_MEDICACAO.search(t):
-            return "orienta_medicacao"
+        achado = ORIENTA_MEDICACAO.search(t)
+        if achado:
+            return f"orienta_medicacao (trecho: {achado.group(0)})"
     for t in todos:
-        if PALAVRA_COLADA.search(t):
-            return "palavras_coladas"
+        achado = PALAVRA_COLADA.search(t)
+        if achado:
+            return f"palavras_coladas (trecho: {achado.group(0)})"
     return None
 
 

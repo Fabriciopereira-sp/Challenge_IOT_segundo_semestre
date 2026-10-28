@@ -26,6 +26,14 @@ class TestGuardas(unittest.TestCase):
     def setUp(self):
         self.cands = llm.candidatos(AV, PET, {})
 
+    def test_frases_inocentes_sobre_medicacao_passam(self):
+        for frase in ("Converse com o veterinário sobre a medicação.",
+                      "A medicação pode alterar o apetite.",
+                      "Houve alterações na medicação?",
+                      "O benazepril é usado para a doença renal."):
+            r, motivo = llm._validar(bruto(tutor=frase), self.cands, PET)
+            self.assertEqual(motivo, "ok", frase)
+
     def test_texto_bom_passa(self):
         r, motivo = llm._validar(bruto(), self.cands, PET)
         self.assertEqual(motivo, "ok")
@@ -33,19 +41,19 @@ class TestGuardas(unittest.TestCase):
     def test_tutor_nao_ajusta_medicacao(self):
         r, motivo = llm._validar(
             bruto(tutor="É importante revisar a medicação e ajustá-la."), self.cands, PET)
-        self.assertEqual(motivo, "orienta_medicacao")
+        self.assertTrue(motivo.startswith("orienta_medicacao"))
 
     def test_palavra_colada_com_maiuscula(self):
         r, motivo = llm._validar(bruto(just="afeta o consumo emMimi."), self.cands, PET)
-        self.assertEqual(motivo, "palavras_coladas")
+        self.assertTrue(motivo.startswith("palavras_coladas"))
 
     def test_palavra_colada_com_prefixo(self):
         r, motivo = llm._validar(bruto(just="ajustar amedicação ou a rotina"), self.cands, PET)
-        self.assertEqual(motivo, "palavras_coladas")
+        self.assertTrue(motivo.startswith("palavras_coladas"))
 
     def test_palavra_gigante(self):
         r, motivo = llm._validar(bruto(just="causa efeitoscolateraisgraves aqui"), self.cands, PET)
-        self.assertEqual(motivo, "palavras_coladas")
+        self.assertTrue(motivo.startswith("palavras_coladas"))
 
     def test_segunda_tentativa_recupera(self):
         ruim = bruto(just="afeta emMimi")
@@ -59,7 +67,7 @@ class TestGuardas(unittest.TestCase):
         with mock.patch.object(llm, "_chamar_ollama", side_effect=[ruim, ruim]):
             r = llm.analisar(AV, PET, {})
         self.assertEqual(r["origem"], "padrao")
-        self.assertEqual(r["motivo_padrao"], "palavras_coladas")
+        self.assertTrue(r["motivo_padrao"].startswith("palavras_coladas"))
 
 
 if __name__ == "__main__":
