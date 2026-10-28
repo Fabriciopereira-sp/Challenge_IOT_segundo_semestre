@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLYVO VET - Bebedouro Inteligente</title>
+<style>
+:root {
+  --bg: #f4f6f8; --card: #ffffff; --borda: #dde3ea; --texto: #1c2733; --suave: #5b6b7b;
+  --azul: #1f6feb; --azul-claro: #e6efff; --verde: #1a7f4b; --verde-claro: #e3f5ea;
+  --amarelo: #9a6700; --amarelo-claro: #fff4d6; --laranja: #b54708; --laranja-claro: #ffe9d6;
+  --vermelho: #c0262d; --vermelho-claro: #fde7e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1722; --card: #17212e; --borda: #2a3a4d; --texto: #e6edf5; --suave: #93a4b7;
+    --azul: #5aa2ff; --azul-claro: #1b2d4a; --verde: #4cc38a; --verde-claro: #143325;
+    --amarelo: #e3b341; --amarelo-claro: #3a2f12; --laranja: #f0883e; --laranja-claro: #3b2414;
+    --vermelho: #ff7b72; --vermelho-claro: #3d1a1d;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.45; }
+header { background: var(--card); border-bottom: 1px solid var(--borda); padding: 14px 16px; }
+.topo { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: center; justify-content: space-between; }
+h1 { font-size: 18px; margin: 0; }
+h1 small { display: block; font-weight: 400; color: var(--suave); font-size: 13px; }
+.controles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+select, input, button { font: inherit; color: var(--texto); background: var(--card);
+  border: 1px solid var(--borda); border-radius: 8px; padding: 7px 10px; }
+.abas { display: inline-flex; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; }
+.abas button { border: 0; border-radius: 0; background: transparent; cursor: pointer; }
+.abas button.ativa { background: var(--azul); color: #fff; }
+main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+.grade { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.card { background: var(--card); border: 1px solid var(--borda); border-radius: 12px; padding: 16px; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave);
+  margin: 0 0 8px; font-weight: 600; }
+.grande { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.suave { color: var(--suave); font-size: 13px; }
+.selo { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.ok, .normal { background: var(--verde-claro); color: var(--verde); }
+.coletando_dados { background: var(--azul-claro); color: var(--azul); }
+.leve { background: var(--amarelo-claro); color: var(--amarelo); }
+.moderada { background: var(--laranja-claro); color: var(--laranja); }
+.alta, .vazio { background: var(--vermelho-claro); color: var(--vermelho); }
+.copo { height: 14px; background: var(--borda); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+.copo > div { height: 100%; background: var(--azul); transition: width .4s; }
+.alerta { border-left: 5px solid var(--amarelo); }
+.alerta.moderada { border-left-color: var(--laranja); }
+.alerta.alta { border-left-color: var(--vermelho); }
+.alerta p { margin: 6px 0; }
+ul.causas { margin: 8px 0 0; padding-left: 20px; }
+ul.causas li { margin-bottom: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--borda); }
+.form { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.form label { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
+.form .largo { grid-column: 1 / -1; }
+button.principal { background: var(--azul); color: #fff; border-color: var(--azul); cursor: pointer; }
+.msg { font-size: 13px; margin-left: 10px; }
+.oculto { display: none; }
+svg text { fill: var(--suave); font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="topo">
+    <h1>CLYVO VET <small>Bebedouro inteligente com IA</small></h1>
+    <div class="controles">
+      <select id="pet" aria-label="Pet"></select>
+      <div class="abas">
+        <button id="aba-tutor" class="ativa">Tutor</button>
+        <button id="aba-clinica">Clínica</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="tutor">
+    <div class="grade">
+      <div class="card"><h2>Situação</h2><div id="t-status"></div><div class="suave" id="t-status-det"></div></div>
+      <div class="card"><h2>Água no pote</h2><div class="grande" id="t-nivel">-</div>
+        <div class="copo"><div id="t-copo" style="width:0%"></div></div>
+        <div class="suave" id="t-pote"></div></div>
+      <div class="card"><h2>Bebeu nas últimas 24 h</h2><div class="grande" id="t-consumo">-</div>
+        <div class="suave" id="t-esperado"></div></div>
+      <div class="card"><h2>Temperatura</h2><div class="grande" id="t-temp">-</div>
+        <div class="suave">ambiente do bebedouro</div></div>
+    </div>
+    <div class="card alerta" id="t-alerta" style="margin-top:14px">
+      <h2>Último alerta da IA</h2><div id="t-alerta-corpo" class="suave">Nenhum alerta até agora.</div>
+    </div>
+  </section>
+
+  <section id="clinica" class="oculto">
+    <div class="grade">
+      <div class="card"><h2>Paciente</h2><div class="grande" id="c-nome">-</div><div class="suave" id="c-resumo"></div></div>
+      <div class="card"><h2>Estado atual</h2><div id="c-status"></div><div class="suave" id="c-desvio"></div></div>
+      <div class="card"><h2>Total de alertas</h2><div class="grande" id="c-total">0</div><div class="suave" id="c-origem"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h2>Consumo diário (ml)</h2><div id="c-grafico"></div></div>
+    <div class="card alerta" id="c-alerta" style="margin-top:14px">
+      <h2>Último alerta - visão da clínica</h2><div id="c-alerta-corpo" class="suave">Nenhum alerta até agora.</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Atualizar perfil do pet</h2>
+      <p class="suave" style="margin-top:0">O que for salvo aqui é usado pela IA já na próxima análise.</p>
+      <div class="form">
+        <label>Idade (anos)<input id="f-idade" type="number" step="0.5" min="0.1"></label>
+        <label>Peso (kg)<input id="f-peso" type="number" step="0.1" min="0.1"></label>
+        <label class="largo">Condições (separe por vírgula)<input id="f-cond"></label>
+        <label class="largo">Medicações (separe por vírgula)<input id="f-med"></label>
+      </div>
+      <p><button class="principal" id="f-salvar">Salvar perfil</button><span class="msg" id="f-msg"></span></p>
+    </div>
+    <div class="card" style="margin-top:14px"><h2>Histórico de alertas</h2><div id="c-historico" class="suave">-</div></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ROTULO = {
+  normal: "Tudo normal", queda: "Consumo baixo", aumento: "Consumo alto",
+  sem_consumo: "Sem consumo", coletando_dados: "Coletando dados"
+};
+let petAtual = null, perfilCarregado = null;
+
+function esc(t) {
+  return String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+async function api(caminho, opcoes) {
+  const r = await fetch(caminho, opcoes);
+  if (!r.ok) return null;
+  return r.json();
+}
+function selo(estado) {
+  if (!estado) return '<span class="selo coletando_dados">Aguardando leituras</span>';
+  const gravidade = estado.status === "normal" || estado.status === "coletando_dados" ? estado.status : estado.gravidade;
+  return `<span class="selo ${esc(gravidade)}">${esc(ROTULO[estado.status] || estado.status)}${
+    estado.status !== "normal" && estado.status !== "coletando_dados" ? " - " + esc(estado.gravidade) : ""}</span>`;
+}
+function listaCausas(analise) {
+  return `<ul class="causas">${(analise.causas_provaveis || []).map((c) =>
+    `<li><b>${esc(c.causa)}</b><br><span class="suave">${esc(c.justificativa)}</span></li>`).join("")}</ul>`;
+}
+function alertaTutor(a) {
+  const an = a.analise;
+  return `<span class="selo ${esc(a.gravidade)}">${esc(a.gravidade)}</span> <span class="suave">${esc(a.motivo)}</span>
+    <p>${esc(an.mensagem_tutor)}</p>
+    <p><b>O que fazer:</b> ${esc(an.acao_recomendada)}</p>
+    <p class="suave"><b>Para ajudar a clínica, observe:</b> ${(an.perguntas_ao_tutor || []).map(esc).join(" · ")}</p>`;
+}
+function alertaClinica(a) {
+  const an = a.analise, m = a.metricas || {};
+  return `<span class="selo ${esc(a.gravidade)}">${esc(a.gravidade)}</span>
+    <span class="suave">${esc(a.motivo)} · origem do texto: ${esc(an.origem)}</span>
+    <p>${esc(an.resumo_clinica)}</p>
+    <p class="suave">Consumo 24 h: ${esc(m.consumo_24h_ml)} ml · esperado: ${esc(m.esperado_ml)} ml ·
+      desvio: ${esc(m.desvio_pct)}% · horas sem consumo: ${esc(m.horas_sem_consumo)}</p>
+    <b>Causas prováveis (ordenadas pela IA)</b>${listaCausas(an)}`;
+}
+function grafico(dias) {
+  if (!dias || !dias.length) return '<span class="suave">Sem histórico.</span>';
+  const L = 640, A = 150, pad = 24, max = Math.max(...dias) * 1.1;
+  const w = (L - pad) / dias.length;
+  const barras = dias.map((v, i) => {
+    const h = (v / max) * (A - 30);
+    const x = pad + i * w + 4;
+    return `<rect x="${x}" y="${A - 18 - h}" width="${w - 8}" height="${h}" rx="3" fill="var(--azul)"/>
+      <text x="${x + (w - 8) / 2}" y="${A - 22 - h}" text-anchor="middle">${Math.round(v)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${L} ${A}" width="100%" role="img" aria-label="Consumo diário em ml">${barras}
+    <text x="${pad}" y="${A - 2}">dias mais antigos à esquerda</text></svg>`;
+}
+
+async function carregarPets() {
+  const pets = await api("/pets") || [];
+  $("pet").innerHTML = pets.map((p) => `<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join("");
+  petAtual = pets.length ? pets[0].id : null;
+}
+
+async function atualizar() {
+  if (!petAtual) return;
+  const [resumo, alertas] = await Promise.all([
+    api(`/pets/${petAtual}/resumo-clinica`), api(`/pets/${petAtual}/alertas?limite=10`)
+  ]);
+  if (!resumo) return;
+  const estado = resumo.estado, perfil = resumo.perfil, ultimo = (alertas || [])[0] || null;
+
+  $("t-status").innerHTML = selo(estado);
+  $("t-status-det").textContent = estado ? "" : "Ainda não chegaram leituras deste pet.";
+  $("t-nivel").textContent = estado ? `${estado.nivel_ml} ml` : "-";
+  $("t-copo").style.width = estado ? Math.min(100, (estado.nivel_ml / 800) * 100) + "%" : "0%";
+  $("t-pote").innerHTML = estado && estado.pote_vazio ? '<span class="selo vazio">Pote quase vazio</span>' : "";
+  $("t-consumo").textContent = estado ? `${Math.round(estado.consumo_24h_ml)} ml` : "-";
+  $("t-esperado").textContent = estado && estado.esperado_ml ? `esperado: ${Math.round(estado.esperado_ml)} ml` : "";
+  $("t-temp").textContent = estado && estado.temperatura_c != null ? `${Number(estado.temperatura_c).toFixed(1)} °C` : "-";
+  $("t-alerta").className = "card alerta " + (ultimo ? ultimo.gravidade : "");
+  $("t-alerta-corpo").innerHTML = ultimo ? alertaTutor(ultimo) : "Nenhum alerta até agora.";
+
+  $("c-nome").textContent = perfil.nome;
+  $("c-resumo").textContent = `${perfil.especie}, ${perfil.raca || "sem raça definida"}, ${perfil.idade_anos} anos, ${perfil.peso_kg} kg`
+    + (perfil.condicoes.length ? ` · ${perfil.condicoes.join(", ")}` : "");
+  $("c-status").innerHTML = selo(estado);
+  $("c-desvio").textContent = estado && estado.desvio_pct != null ? `desvio de ${estado.desvio_pct}% do esperado` : "";
+  $("c-total").textContent = resumo.total_alertas;
+  $("c-origem").textContent = ultimo ? `último texto gerado por: ${ultimo.analise.origem}` : "";
+  $("c-grafico").innerHTML = grafico(resumo.historico_dias_ml);
+  $("c-alerta").className = "card alerta " + (ultimo ? ultimo.gravidade : "");
+  $("c-alerta-corpo").innerHTML = ultimo ? alertaClinica(ultimo) : "Nenhum alerta até agora.";
+  $("c-historico").innerHTML = (alertas || []).length ? `<table><tr><th>Status</th><th>Gravidade</th><th>Motivo</th></tr>${
+    alertas.map((a) => `<tr><td>${esc(ROTULO[a.status] || a.status)}</td><td><span class="selo ${esc(a.gravidade)}">${esc(a.gravidade)}</span></td><td>${esc(a.motivo)}</td></tr>`).join("")
+  }</table>` : "Nenhum alerta até agora.";
+
+  if (perfilCarregado !== petAtual) {
+    $("f-idade").value = perfil.idade_anos; $("f-peso").value = perfil.peso_kg;
+    $("f-cond").value = perfil.condicoes.join(", "); $("f-med").value = perfil.medicacoes.join(", ");
+    perfilCarregado = petAtual;
+  }
+}
+
+const lista = (t) => t.split(",").map((s) => s.trim()).filter(Boolean);
+$("f-salvar").onclick = async () => {
+  const corpo = {
+    idade_anos: parseFloat($("f-idade").value), peso_kg: parseFloat($("f-peso").value),
+    condicoes: lista($("f-cond").value), medicacoes: lista($("f-med").value)
+  };
+  const r = await fetch(`/pets/${petAtual}/perfil`, {
+    method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(corpo)
+  });
+  $("f-msg").textContent = r.ok ? "Perfil salvo. A próxima análise da IA já usa estes dados." : "Não foi possível salvar.";
+  if (r.ok) { perfilCarregado = null; atualizar(); }
+};
+
+function mostrar(aba) {
+  $("tutor").classList.toggle("oculto", aba !== "tutor");
+  $("clinica").classList.toggle("oculto", aba !== "clinica");
+  $("aba-tutor").classList.toggle("ativa", aba === "tutor");
+  $("aba-clinica").classList.toggle("ativa", aba === "clinica");
+}
+$("aba-tutor").onclick = () => mostrar("tutor");
+$("aba-clinica").onclick = () => mostrar("clinica");
+$("pet").onchange = (e) => { petAtual = e.target.value; perfilCarregado = null; atualizar(); };
+
+carregarPets().then(atualizar);
+setInterval(atualizar, 3000);
+</script>
+</body>
+</html>
