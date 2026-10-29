@@ -42,7 +42,7 @@ A avaliação da Sprint 3 trouxe quatro pontos. Cada um virou uma mudança concr
 2. O agente calcula o consumo, descarta ruído e reabastecimentos e mede o desvio contra o padrão do pet.
 3. Se há anomalia (queda, aumento ou sem consumo), classifica a gravidade (leve, moderada ou alta).
 4. As **regras** montam uma lista de causas candidatas, cada uma com a evidência dos dados. A **LLM só ordena e justifica** essas causas, sem poder inventar outras nem mudar a gravidade.
-5. A resposta da LLM é **validada**. Se citar sintoma ou remédio que não está no perfil, mandar o tutor mexer em medicação ou vier com palavras coladas, ela é recusada, tenta-se uma segunda vez e, se falhar de novo, usa-se um texto padrão seguro.
+5. A resposta da LLM é **validada**. Se citar sintoma ou remédio que não está no perfil, ou vier com palavras coladas, a resposta é recusada, tenta-se uma segunda vez e, se falhar de novo, usa-se um texto padrão seguro. Se a IA orientar o tutor a mexer em medicação, só a mensagem do tutor é trocada pelo texto seguro, e as causas e o resumo da clínica escritos pela IA são mantidos.
 6. Leituras, eventos e alertas são gravados no banco. A API serve esses dados para o dashboard.
 
 ## Como rodar
@@ -110,7 +110,7 @@ db.py             Banco SQLite (pets, consumo, eventos, alertas, estado)
 api.py            API REST (FastAPI)
 dashboard.html    Telas do tutor e da clínica
 pets.json         Perfis iniciais dos pets (Rex e Mimi)
-test_*.py         58 testes automatizados
+test_*.py         67 testes automatizados
 sprint3/          Entrega anterior, mantida como histórico
 ```
 
@@ -139,7 +139,7 @@ sprint3/          Entrega anterior, mantida como histórico
 
 ## Resultados parciais
 
-- **58 testes automatizados passando**, cobrindo consumo, detecção, validação da IA, agente, banco e API.
+- **67 testes automatizados passando**, cobrindo consumo, detecção, validação da IA, agente, banco e API.
 - **Queda de consumo**: nos cenários simulados, o sistema detecta a queda e classifica a gravidade (por exemplo, 31% abaixo do esperado é leve e 50% é moderada).
 - **Reabastecimento**: quando o tutor enche o pote, o aumento de nível é reconhecido como reabastecimento e não conta como consumo.
 - **Personalização**: para a gata Mimi, com doença renal e uso de benazepril, a IA cita a condição e a medicação registradas no perfil. Para o Rex, que não tem condições, ela não cita nenhuma.

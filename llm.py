@@ -22,12 +22,55 @@ ORIENTA_MEDICACAO = re.compile(
     r"[^.!?]{0,25}\b(medica\w*|dose\w*|rem[eé]dio\w*)",
     re.IGNORECASE,
 )
+# a mensagem ao tutor não fala de remédio nem escreve em primeira pessoa
+TUTOR_NAO_PODE = re.compile(
+    r"medica|rem[eé]dio|benazepril|obrigad[oa]|\bestou\b|gostaria|posso ajudar|\brecomendo\b|\bsugiro\b",
+    re.IGNORECASE,
+)
 # palavras coladas por modelo pequeno: maiúscula no meio ou prefixo grudado
 PALAVRA_COLADA = re.compile(
     r"[a-zà-ú][A-ZÀ-Ú]"
     r"|\b(a|e|o|em|de|do|da|no|na)(medica|rotina|condic|condiç|consumo|água|agua|efeito)\w*"
     r"|\b\w{18,}\b",
 )
+
+# conserta as colas mais comuns de modelo pequeno em vez de jogar a resposta fora
+_PALAVRAS_DO_TEXTO = (
+    "doença|doenca|medicação|medicacao|rotina|condição|condicao|consumo|água|agua|efeito|"
+    "efeitos|pote|veterinário|veterinario|Mimi|Rex|pet|gato|cachorro"
+)
+COLA_PREFIXO = re.compile(
+    r"\b(A|a|E|e|O|o|De|de|Do|do|Da|da|No|no|Na|na|Em|em|Com|com|Que|que|Para|para)"
+    r"(?=(" + _PALAVRAS_DO_TEXTO + r")\b)"
+)
+COLA_SUFIXO = re.compile(r"\b(\w+ndo)(para|com|que|ao|em|de)\b")
+COLA_MAIUSCULA = re.compile(r"([a-zà-ú])([A-ZÀ-Ú])")
+COLA_PONTUACAO = re.compile(r"([a-zà-ú])([.,;:!?])([A-Za-zÀ-ú])")
+COLA_SUBSTANTIVO = re.compile(
+    r"\b(água|agua|doença|medicação|rotina|consumo|pote|Mimi|Rex)"
+    r"(de|do|da|em|com|que|para|ou|e|o|a)\b"
+)
+COLA_OQUE = re.compile(r"\b(o|O)que\b")
+
+
+def _consertar_texto(texto):
+    texto = COLA_PONTUACAO.sub(r"\1\2 \3", texto)
+    texto = COLA_SUBSTANTIVO.sub(r"\1 \2", texto)
+    texto = COLA_OQUE.sub(lambda m: m.group(1) + " que", texto)
+    texto = COLA_MAIUSCULA.sub(r"\1 \2", texto)
+    texto = COLA_SUFIXO.sub(r"\1 \2", texto)
+    return COLA_PREFIXO.sub(lambda m: m.group(1) + " ", texto)
+
+
+def _consertar_tudo(obj):
+    if isinstance(obj, str):
+        return _consertar_texto(obj)
+    if isinstance(obj, list):
+        return [_consertar_tudo(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _consertar_tudo(v) for k, v in obj.items()}
+    return obj
+
 
 DIRECAO = {
     "queda": "consumo ABAIXO do esperado",
@@ -49,6 +92,7 @@ SISTEMA = (
     "medicação ou dose: se houver medicação registrada, diga apenas que o veterinário "
     "deve ser consultado sobre ela. Só recomende procurar o veterinário se a gravidade "
     "for alta. "
+    "Não sabemos o gênero do pet: use o nome dele e evite ele, ela, o gato e a gata. "
     'Responda apenas com JSON neste formato: {"causas_provaveis": [{"id": "...", '
     '"justificativa": "..."}], "perguntas_ao_tutor": ["..."], "acao_recomendada": '
     '"...", "mensagem_tutor": "até 3 frases", "resumo_clinica": "até 3 frases"}'
@@ -188,12 +232,8 @@ def _tem_termo_sem_base(textos, pet):
     return False
 
 
-def _texto_com_defeito(textos_tutor, todos):
-    # devolve o motivo se o texto tiver orientação de risco ou palavras coladas
-    for t in textos_tutor:
-        achado = ORIENTA_MEDICACAO.search(t)
-        if achado:
-            return f"orienta_medicacao (trecho: {achado.group(0)})"
+def _texto_com_defeito(todos):
+    # devolve o motivo se algum texto tiver palavras coladas
     for t in todos:
         achado = PALAVRA_COLADA.search(t)
         if achado:
@@ -205,6 +245,8 @@ def _validar(bruto, cands, pet):
     # devolve (resposta limpa, motivo). Se algo estiver errado, devolve (None, motivo)
     if not isinstance(bruto, dict):
         return None, "json_invalido"
+
+    bruto = _consertar_tudo(bruto)
 
     causas = bruto.get("causas_provaveis")
     perguntas = bruto.get("perguntas_ao_tutor")
@@ -244,13 +286,17 @@ def _validar(bruto, cands, pet):
     if _tem_termo_sem_base(todos, pet):
         return None, "termo_sem_base"
 
-    defeito = _texto_com_defeito(
-        [textos["mensagem_tutor"], textos["acao_recomendada"]] + perguntas_ok, todos
-    )
+    defeito = _texto_com_defeito(todos)
     if defeito:
         return None, defeito
 
-    resposta = {"causas_provaveis": causas_ok, "perguntas_ao_tutor": perguntas_ok, **textos}
+    # orientação sobre medicação não é motivo para perder a resposta inteira:
+    # só o texto do tutor é trocado pelo padrão seguro (ver analisar)
+    textos_tutor = [textos["mensagem_tutor"], textos["acao_recomendada"]] + perguntas_ok
+    inseguro = any(ORIENTA_MEDICACAO.search(t) or TUTOR_NAO_PODE.search(t) for t in textos_tutor)
+
+    resposta = {"causas_provaveis": causas_ok, "perguntas_ao_tutor": perguntas_ok, **textos,
+                "_tutor_inseguro": inseguro}
     return resposta, "ok"
 
 
@@ -296,11 +342,17 @@ def analisar(avaliacao, pet, contexto):
             bruto = _chamar_ollama(evidencias, temperatura)
             valido, motivo = _validar(bruto, cands, pet)
             if valido:
-                return {**valido, "origem": "llm"}
+                if valido.pop("_tutor_inseguro"):
+                    seguro = _padrao(a, pet, cands)
+                    for chave in ("mensagem_tutor", "acao_recomendada", "perguntas_ao_tutor"):
+                        valido[chave] = seguro[chave]
+                    valido["tutor_texto_seguro"] = True
+                return {**valido, "origem": "llm", "modelo": OLLAMA_MODEL, "entrada_ia": evidencias}
         except requests.RequestException:
             motivo = "ollama_indisponivel"
             break
         except (ValueError, KeyError):
             motivo = "json_invalido"
 
-    return {**_padrao(a, pet, cands), "origem": "padrao", "motivo_padrao": motivo}
+    return {**_padrao(a, pet, cands), "origem": "padrao", "motivo_padrao": motivo,
+            "modelo": OLLAMA_MODEL, "entrada_ia": evidencias}

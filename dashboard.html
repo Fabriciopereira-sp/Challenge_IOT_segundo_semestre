@@ -63,6 +63,8 @@ button.principal { background: var(--azul); color: #fff; border-color: var(--azu
 .msg { font-size: 13px; margin-left: 10px; }
 .oculto { display: none; }
 svg text { fill: var(--suave); font-size: 11px; }
+.painel-ia { margin-top: 12px; border-top: 1px solid var(--borda); padding-top: 10px; }
+.painel-ia summary { cursor: pointer; font-weight: 600; margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -161,7 +163,23 @@ function alertaClinica(a) {
     <p>${esc(an.resumo_clinica)}</p>
     <p class="suave">Consumo 24 h: ${esc(m.consumo_24h_ml)} ml · esperado: ${esc(m.esperado_ml)} ml ·
       desvio: ${esc(m.desvio_pct)}% · horas sem consumo: ${esc(m.horas_sem_consumo)}</p>
-    <b>Causas prováveis (ordenadas pela IA)</b>${listaCausas(an)}`;
+    <b>Causas prováveis (ordenadas pela IA)</b>${listaCausas(an)}${painelIA(an)}`;
+}
+function painelIA(an) {
+  if (!an.entrada_ia) return "";
+  const e = an.entrada_ia, p = e.pet || {}, av = e.avaliacao || {};
+  const cands = (e.causas_candidatas || []).map((c) =>
+    `<li><b>${esc(c.causa)}</b> <span class="suave">evidência: ${esc(c.evidencia)}</span></li>`).join("");
+  return `<details class="painel-ia" open>
+    <summary>Como a IA chegou nisso</summary>
+    <p class="suave">Modelo: <b>${esc(an.modelo)}</b> (IA generativa rodando localmente no Ollama) · texto gerado por: <b>${esc(an.origem)}</b></p>
+    <p><b>1. As regras calcularam:</b> consumo ${esc(av.consumo_24h_ml)} ml, esperado ${esc(av.esperado_ml)} ml,
+      desvio ${esc(av.desvio_pct)}%, gravidade <b>${esc(av.gravidade)}</b> (definida por regras, a IA não altera).</p>
+    <p><b>2. A IA recebeu o perfil:</b> ${esc(p.nome)}, ${esc(p.especie)}, ${esc(p.idade_anos)} anos, ${esc(p.peso_kg)} kg,
+      condições: ${esc((p.condicoes || []).join(", ") || "nenhuma")}, medicações: ${esc((p.medicacoes || []).join(", ") || "nenhuma")}.</p>
+    <p><b>3. E as causas candidatas, cada uma com a sua evidência:</b></p><ul class="causas">${cands}</ul>
+    ${an.origem === "llm" ? `<p><b>4. A IA ordenou</b> da mais para a menos provável e <b>escreveu</b> as justificativas e os textos acima.</p>` : `<p><b>4.</b> Desta vez a IA não respondeu de forma válida (${esc(an.motivo_padrao || "indisponível")}), então o sistema usou o texto padrão seguro.</p>`}
+  </details>`;
 }
 function grafico(dias) {
   if (!dias || !dias.length) return '<span class="suave">Sem histórico.</span>';

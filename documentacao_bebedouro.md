@@ -45,7 +45,7 @@ Modelos pequenos erram. Em testes reais com o modelo llama3.2 observamos erros c
 |---|---|
 | A LLM só usa os ids das causas candidatas | Não consegue inventar causas |
 | Termos sem base (diarreia, vômito, febre, convulsão, medicação inexistente) | Resposta recusada |
-| Orientação para ajustar, trocar ou suspender medicação | Resposta recusada, porque o tutor não deve mexer em remédio sozinho |
+| Orientação para ajustar, trocar ou suspender medicação | Só a mensagem do tutor é trocada pelo texto seguro, porque o tutor não deve mexer em remédio sozinho. As causas e o resumo da clínica da IA são mantidos |
 | Palavras coladas | Resposta recusada |
 | Gravidade fixada pelas regras | A LLM não consegue minimizar nem aumentar o alerta |
 | Duas tentativas e depois **texto padrão seguro** | O alerta sempre chega, mesmo se o Ollama estiver fora do ar |
@@ -94,7 +94,7 @@ A personalização acontece em dois níveis:
 
 ## 6. Verificação
 
-- **58 testes automatizados** (`python -m unittest`) cobrindo o cálculo do consumo, a detecção, o gatilho, a validação da LLM, o agente, o banco e a API.
+- **67 testes automatizados** (`python -m unittest`) cobrindo o cálculo do consumo, a detecção, o gatilho, a validação da LLM, o agente, o banco e a API.
 - **Simulador** com cenários comprimidos no tempo (`normal`, `queda`, `aumento`, `refil`, `sem_consumo`) para demonstrar o sistema sem hardware.
 - **Teste com a LLM real** (llama3.2 no Ollama): a saída para o Rex e para a Mimi foi gerada pela LLM, citando apenas dados do perfil.
 
