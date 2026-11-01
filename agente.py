@@ -185,7 +185,7 @@ def rodar_mqtt(pet, repo):
     agente = Agente(pet, repo=repo)
 
     def on_connect(client, userdata, flags, rc):
-        print(f"[MQTT] conectado ao {MQTT_BROKER} (codigo {rc})")
+        print(f"[MQTT] conectado ao {MQTT_BROKER} (código {rc})")
         client.subscribe(topico("nivel"))
         client.subscribe(topico("temp"))
         print(f"[AGENTE] acompanhando o pet {pet['nome']} em {PREFIXO}")

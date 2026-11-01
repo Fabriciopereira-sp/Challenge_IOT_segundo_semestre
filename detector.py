@@ -29,11 +29,13 @@ def baseline(historico_ml, peso_kg):
     # mediana e MAD aguentam um dia fora da curva, a média não
     if len(historico_ml) >= MIN_DIAS_HISTORICO:
         mediana = statistics.median(historico_ml)
-        mad = statistics.median(abs(x - mediana) for x in historico_ml)
-        escala = max(1.4826 * mad, 0.10 * mediana)
-        return mediana, escala, "historico"
+        # histórico de dias sem consumo (sensor parado, por exemplo) não serve de referência
+        if mediana > 0:
+            mad = statistics.median(abs(x - mediana) for x in historico_ml)
+            escala = max(1.4826 * mad, 0.10 * mediana)
+            return mediana, escala, "historico"
 
-    esperado = peso_kg * ML_POR_KG_DIA
+    esperado = max(peso_kg * ML_POR_KG_DIA, 1.0)
     return esperado, 0.20 * esperado, "peso"
 
 
@@ -59,7 +61,7 @@ def avaliar(consumo_24h_ml, historico_ml, peso_kg, horas_sem_consumo, nivel_ml):
             round(horas, 1), motivo,
         )
 
-    # pote com agua e ninguem bebendo: é o caso que o gatilho "vazio" nunca pegava
+    # pote com água e ninguém bebendo: é o caso que o gatilho "vazio" nunca pegava
     if horas >= HORAS_SEM_CONSUMO and nivel_ml >= NIVEL_COM_AGUA_ML:
         gravidade = "alta" if horas >= 2 * HORAS_SEM_CONSUMO else "moderada"
         return montar(

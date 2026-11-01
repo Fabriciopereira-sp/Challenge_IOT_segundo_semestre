@@ -64,7 +64,7 @@ def rodar_local(cenario, pet, repo=None, atraso=0.0):
 
     agente = Agente(pet, repo=repo)
     alertas = 0
-    print(f"=== cenario '{cenario}' | pet {pet['nome']} (simulacao local) ===")
+    print(f"=== cenário '{cenario}' | pet {pet['nome']} (simulação local) ===")
 
     for ts, dist, temp in gerar(cenario, pet):
         agente.receber_temperatura(temp)
@@ -76,11 +76,11 @@ def rodar_local(cenario, pet, repo=None, atraso=0.0):
             print(f"\n[ALERTA no dia {dia:.1f}] {payload['status']} - gravidade {payload['gravidade']}")
             print(f"  motivo: {payload['motivo']}")
             analise = payload["analise"]
-            print(f"  origem da analise: {analise['origem']}")
+            print(f"  origem da análise: {analise['origem']}")
             if analise["origem"] != "llm":
-                print(f"  motivo do texto padrao: {analise['motivo_padrao']}")
+                print(f"  motivo do texto padrão: {analise['motivo_padrao']}")
             print(f"  tutor:   {analise['mensagem_tutor']}")
-            print(f"  clinica: {analise['resumo_clinica']}")
+            print(f"  clínica: {analise['resumo_clinica']}")
             for causa in analise["causas_provaveis"]:
                 print(f"  - {causa['causa']}: {causa['justificativa']}")
         if atraso:
@@ -96,7 +96,7 @@ def rodar_mqtt(cenario, pet, atraso):
     client = mqtt.Client()
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
-    print(f"publicando o cenario '{cenario}' ({pet['nome']}) no broker...")
+    print(f"publicando o cenário '{cenario}' ({pet['nome']}) no broker...")
 
     for ts, dist, temp in gerar(cenario, pet):
         client.publish(topico("temp"), json.dumps({"valor": round(temp, 1), "ts": ts}))
@@ -106,7 +106,7 @@ def rodar_mqtt(cenario, pet, atraso):
 
     time.sleep(1)
     client.loop_stop()
-    print("fim do cenario")
+    print("fim do cenário")
 
 
 if __name__ == "__main__":

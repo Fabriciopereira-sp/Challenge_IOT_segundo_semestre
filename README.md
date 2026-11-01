@@ -42,10 +42,12 @@ A avaliação da Sprint 3 trouxe quatro pontos. Cada um virou uma mudança concr
 2. O agente calcula o consumo, descarta ruído e reabastecimentos e mede o desvio contra o padrão do pet.
 3. Se há anomalia (queda, aumento ou sem consumo), classifica a gravidade (leve, moderada ou alta).
 4. As **regras** montam uma lista de causas candidatas, cada uma com a evidência dos dados. A **LLM só ordena e justifica** essas causas, sem poder inventar outras nem mudar a gravidade.
-5. A resposta da LLM é **validada**. Se citar sintoma ou remédio que não está no perfil, ou vier com palavras coladas, a resposta é recusada, tenta-se uma segunda vez e, se falhar de novo, usa-se um texto padrão seguro. Se a IA orientar o tutor a mexer em medicação, só a mensagem do tutor é trocada pelo texto seguro, e as causas e o resumo da clínica escritos pela IA são mantidos.
+5. A resposta da LLM é **validada**. Palavras coladas, erro comum de modelo pequeno, são consertadas automaticamente. Se citar sintoma ou remédio que não está no perfil, a resposta é recusada, tenta-se uma segunda vez e, se falhar de novo, usa-se um texto padrão seguro. Se a IA orientar o tutor a mexer em medicação, só a mensagem do tutor é trocada pelo texto seguro, e as causas e o resumo da clínica escritos pela IA são mantidos.
 6. Leituras, eventos e alertas são gravados no banco. A API serve esses dados para o dashboard.
 
 ## Como rodar
+
+Requisitos: **Python 3.10 ou superior** e o **Ollama** instalado. Os comandos abaixo funcionam no terminal do Windows (PowerShell), do Linux e do Mac.
 
 ### 1. Instalar o Ollama e o modelo
 
@@ -78,7 +80,9 @@ Sem `--db` o simulador só imprime o resultado na tela.
 python api.py
 ```
 
-Abra `http://127.0.0.1:8000` para o dashboard (abas **Tutor** e **Clínica**) e `http://127.0.0.1:8000/docs` para a documentação interativa da API.
+Abra `http://127.0.0.1:8000` para o dashboard (abas **Tutor** e **Clínica**) e `http://127.0.0.1:8000/docs` para a documentação interativa da API. Para parar, aperte `Ctrl+C` no terminal.
+
+O dashboard atualiza sozinho a cada 3 segundos. Por isso dá para deixá-lo aberto e rodar o simulador em outro terminal: o alerta aparece na tela assim que a IA responde.
 
 ### 5. Rodar os testes
 
@@ -86,21 +90,27 @@ Abra `http://127.0.0.1:8000` para o dashboard (abas **Tutor** e **Clínica**) e 
 python -m unittest
 ```
 
-### 6. (Opcional) Tempo real com o ESP32
+### 6. (Opcional) Tempo real via MQTT
 
 ```bash
 python agente.py --pet rex
 ```
 
-O agente escuta o broker `broker.hivemq.com` no prefixo `clyvo/vet/s4-rm563237/bebedouro`.
+O agente escuta o broker `broker.hivemq.com` no prefixo `clyvo/vet/s4-rm563237/bebedouro`, nos tópicos `nivel` e `temp`. Cada mensagem é um JSON no formato `{"valor": 12.5}` (para o nível, `valor` é a distância em cm até a água; o campo `status` pode vir junto e é ignorado).
+
+O firmware do ESP32 (Sprint 1 e 2) fica no [repositório original](https://github.com/Fabriciopereira-sp/IOT_challenge_2026.git). Sem o hardware, o comando `python simulador.py queda --mqtt`, em outro terminal, publica no broker as mesmas mensagens que o ESP32 publicaria.
 
 ### Trocar o modelo de IA
 
-Se o professor indicar outro modelo, baixe-o com `ollama pull <modelo>` e rode com a variável `OLLAMA_MODEL` (por exemplo `OLLAMA_MODEL=llama3.1:8b`).
+Se o professor indicar outro modelo, baixe-o com `ollama pull <modelo>` e rode com a variável `OLLAMA_MODEL` (por exemplo, no PowerShell: `$env:OLLAMA_MODEL="llama3.1:8b"`; no Linux e no Mac: `OLLAMA_MODEL=llama3.1:8b`) antes de rodar o simulador.
 
 ## Estrutura dos arquivos
 
 ```
+README.md                  Este arquivo
+documentacao_bebedouro.md  Documentação técnica da solução de IA
+diagrama_arquitetura.svg   Diagrama de arquitetura
+requirements.txt           Dependências do Python
 consumo.py        Calcula o consumo a partir das leituras de nível
 detector.py       Mediana + MAD, gravidade e gatilho por tempo
 llm.py            Causas candidatas, chamada ao Ollama e validação
@@ -110,7 +120,7 @@ db.py             Banco SQLite (pets, consumo, eventos, alertas, estado)
 api.py            API REST (FastAPI)
 dashboard.html    Telas do tutor e da clínica
 pets.json         Perfis iniciais dos pets (Rex e Mimi)
-test_*.py         67 testes automatizados
+test_*.py         71 testes automatizados
 sprint3/          Entrega anterior, mantida como histórico
 ```
 
@@ -139,8 +149,18 @@ sprint3/          Entrega anterior, mantida como histórico
 
 ## Resultados parciais
 
-- **67 testes automatizados passando**, cobrindo consumo, detecção, validação da IA, agente, banco e API.
+- **71 testes automatizados passando**, cobrindo consumo, detecção, validação da IA, agente, banco e API.
 - **Queda de consumo**: nos cenários simulados, o sistema detecta a queda e classifica a gravidade (por exemplo, 31% abaixo do esperado é leve e 50% é moderada).
+- **Cenários simulados** (3 dias de dados comprimidos, rodados para o Rex e para a Mimi):
+
+| Cenário | O que simula | Alertas gerados |
+|---|---|---|
+| `normal` | Consumo habitual | 0 |
+| `refil` | Tutor enche o pote antes de ele esvaziar | 0 (não confunde com consumo) |
+| `queda` | Consumo cai pela metade no último dia | 3 (leve, leve e moderada) |
+| `aumento` | Consumo quase dobra no último dia | 3 |
+| `sem_consumo` | Pote com água e ninguém bebendo | 3 |
+
 - **Reabastecimento**: quando o tutor enche o pote, o aumento de nível é reconhecido como reabastecimento e não conta como consumo.
 - **Personalização**: para a gata Mimi, com doença renal e uso de benazepril, a IA cita a condição e a medicação registradas no perfil. Para o Rex, que não tem condições, ela não cita nenhuma.
 - **Segurança do texto**: respostas com fatos inventados, orientação para o tutor mexer em medicação ou palavras coladas são recusadas, e o sistema usa um texto padrão.

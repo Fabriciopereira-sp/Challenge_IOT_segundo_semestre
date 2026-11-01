@@ -35,7 +35,7 @@ class RastreadorConsumo:
         return self.ultimo_ml or 0.0
 
     def _fechar_episodio(self, ts):
-        # um episodio é uma sequencia de leituras caindo (o pet bebendo)
+        # um episódio é uma sequência de leituras caindo (o pet bebendo)
         if self.episodio_ml >= CONSUMO_MIN_ML:
             self.eventos.append(Evento("consumo", ts, self.episodio_ml))
         self.episodio_ml = 0.0
