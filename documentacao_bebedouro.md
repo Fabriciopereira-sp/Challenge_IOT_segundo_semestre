@@ -94,7 +94,7 @@ A personalização acontece em dois níveis:
 
 ## 6. Verificação
 
-- **71 testes automatizados** (`python -m unittest`) cobrindo o cálculo do consumo, a detecção, o gatilho, a validação da LLM, o agente, o banco e a API.
+- **73 testes automatizados** (`python -m unittest`) cobrindo o cálculo do consumo, a detecção, o gatilho, a validação da LLM, o agente, o banco e a API.
 - **Simulador** com cenários comprimidos no tempo (`normal`, `queda`, `aumento`, `refil`, `sem_consumo`) para demonstrar o sistema sem hardware.
 - **Teste com a LLM real** (llama3.2 no Ollama): a saída para o Rex e para a Mimi foi gerada pela LLM, citando apenas dados do perfil.
 

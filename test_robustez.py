@@ -1,6 +1,14 @@
+import contextlib
+import io
 import unittest
+from unittest import mock
+
+import requests
 
 import detector
+import llm
+import simulador
+from agente import carregar_pet
 
 
 class TestHistoricoZerado(unittest.TestCase):
@@ -22,6 +30,21 @@ class TestHistoricoZerado(unittest.TestCase):
         av = detector.avaliar(220, [210, 225, 218, 230], 4.5, 3.0, 500)
         self.assertEqual(av.base, "historico")
         self.assertEqual(av.status, "normal")
+
+
+class TestMaxAlertas(unittest.TestCase):
+    def rodar(self, **kwargs):
+        saida = io.StringIO()
+        with mock.patch.object(llm, "_chamar_ollama", side_effect=requests.ConnectionError()):
+            with contextlib.redirect_stdout(saida):
+                simulador.rodar_local("queda", carregar_pet("mimi"), **kwargs)
+        return saida.getvalue()
+
+    def test_sem_limite_gera_todos_os_alertas(self):
+        self.assertEqual(self.rodar().count("[ALERTA"), 3)
+
+    def test_max_alertas_para_depois_do_primeiro(self):
+        self.assertEqual(self.rodar(max_alertas=1).count("[ALERTA"), 1)
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@ def gerar(cenario, pet):
         yield t, dist_de_ml(nivel), temperatura_em(hora)
 
 
-def rodar_local(cenario, pet, repo=None, atraso=0.0):
+def rodar_local(cenario, pet, repo=None, atraso=0.0, max_alertas=None):
     if repo is not None:
         repo.reiniciar(pet["id"])
 
@@ -83,6 +83,8 @@ def rodar_local(cenario, pet, repo=None, atraso=0.0):
             print(f"  clínica: {analise['resumo_clinica']}")
             for causa in analise["causas_provaveis"]:
                 print(f"  - {causa['causa']}: {causa['justificativa']}")
+        if max_alertas and alertas >= max_alertas:
+            break
         if atraso:
             time.sleep(atraso)
 
@@ -115,6 +117,8 @@ if __name__ == "__main__":
     parser.add_argument("--pet", default="rex")
     parser.add_argument("--mqtt", action="store_true", help="publica no broker em vez de rodar local")
     parser.add_argument("--db", action="store_true", help="grava no banco SQLite (para a API e o dashboard)")
+    parser.add_argument("--max-alertas", type=int, default=None,
+                        help="para a simulação depois de N alertas (útil para demonstrações rápidas)")
     parser.add_argument("--atraso", type=float, default=None,
                         help="segundos entre leituras (deixa a demonstração mais lenta)")
     args = parser.parse_args()
@@ -127,4 +131,4 @@ if __name__ == "__main__":
         if args.db:
             repo = Repositorio()
             repo.semear_pets()
-        rodar_local(args.cenario, pet, repo, args.atraso or 0.0)
+        rodar_local(args.cenario, pet, repo, args.atraso or 0.0, args.max_alertas)

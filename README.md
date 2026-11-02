@@ -20,7 +20,7 @@ O bebedouro mede a água do pet. A solução transforma essas medidas em **consu
 
 | Item | Link |
 |---|---|
-| Vídeo (YouTube, não listado) | **[colar aqui o link do vídeo da Sprint 4]** |
+| Vídeo (YouTube, não listado) | https://youtu.be/ZmwhdRGVgZ8 |
 | Documentação técnica | [documentacao_bebedouro.md](./documentacao_bebedouro.md) |
 | Diagrama de arquitetura | [diagrama_arquitetura.svg](./diagrama_arquitetura.svg) |
 | Entrega anterior (Sprint 3) | [sprint3/](./sprint3/) |
@@ -72,7 +72,7 @@ python simulador.py queda --db
 python simulador.py queda --pet mimi --db
 ```
 
-Sem `--db` o simulador só imprime o resultado na tela.
+Sem `--db` o simulador só imprime o resultado na tela. Com `--max-alertas 1` ele para depois do primeiro alerta, o que deixa a demonstração mais rápida, já que cada resposta da IA leva cerca de um a dois minutos em um computador comum.
 
 ### 4. Subir a API e o dashboard
 
@@ -120,7 +120,7 @@ db.py             Banco SQLite (pets, consumo, eventos, alertas, estado)
 api.py            API REST (FastAPI)
 dashboard.html    Telas do tutor e da clínica
 pets.json         Perfis iniciais dos pets (Rex e Mimi)
-test_*.py         71 testes automatizados
+test_*.py         73 testes automatizados
 sprint3/          Entrega anterior, mantida como histórico
 ```
 
@@ -149,7 +149,7 @@ sprint3/          Entrega anterior, mantida como histórico
 
 ## Resultados parciais
 
-- **71 testes automatizados passando**, cobrindo consumo, detecção, validação da IA, agente, banco e API.
+- **73 testes automatizados passando**, cobrindo consumo, detecção, validação da IA, agente, banco e API.
 - **Queda de consumo**: nos cenários simulados, o sistema detecta a queda e classifica a gravidade (por exemplo, 31% abaixo do esperado é leve e 50% é moderada).
 - **Cenários simulados** (3 dias de dados comprimidos, rodados para o Rex e para a Mimi):
 
