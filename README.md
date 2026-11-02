@@ -176,5 +176,5 @@ sprint3/          Entrega anterior, mantida como histórico
 - O consumo é estimado pela variação do nível. Evaporação e pet bebendo durante um reabastecimento não são distinguidos.
 - A referência inicial de 50 ml por kg por dia é geral e deveria ser ajustada com o veterinário.
 - O modelo local é pequeno e eventualmente erra a escrita, e a validação existe justamente para isso.
-- A integração com o aplicativo móvel da CLYVO VET (Java) não foi feita nesta sprint. A IA é entregue por API REST (`/pets/{id}/alertas` e `/resumo-clinica`), pronta para o app consumir, e o dashboard web faz esse papel por enquanto.
+- Nesta disciplina, a aplicação da CLYVO VET é o bebedouro inteligente com banco, API e dashboard, e é nela que a IA está integrada. O aplicativo móvel é desenvolvido em outra disciplina e pode consumir a mesma API REST (`/pets/{id}/alertas` e `/pets/{id}/resumo-clinica`) sem alterar a IA.
 - O sistema apoia a decisão, **não faz diagnóstico**.
