@@ -165,9 +165,16 @@ sprint3/          Entrega anterior, mantida como histórico
 - **Personalização**: para a gata Mimi, com doença renal e uso de benazepril, a IA cita a condição e a medicação registradas no perfil. Para o Rex, que não tem condições, ela não cita nenhuma.
 - **Segurança do texto**: respostas com fatos inventados, orientação para o tutor mexer em medicação ou palavras coladas são recusadas, e o sistema usa um texto padrão.
 
+## Evidências do funcionamento
+
+- [evidencias/respostas_reais_llm.md](./evidencias/respostas_reais_llm.md): alertas reais gerados pelo llama3.2 (Ollama) para o Rex e a Mimi, com `origem = llm`, mensagem ao tutor, resumo da clínica e causas ordenadas pela IA.
+- O vídeo mostra o dashboard com o painel "Como a IA chegou nisso", que exibe o modelo usado, o resultado das regras, o perfil do pet e as causas candidatas.
+- Nos alertas da Mimi, a mensagem ao tutor aparece com o texto seguro padrão porque o modelo orientou medicação e a validação trocou o texto; as causas e o resumo da clínica escritos pela IA foram mantidos.
+
 ## Limitações
 
 - O consumo é estimado pela variação do nível. Evaporação e pet bebendo durante um reabastecimento não são distinguidos.
 - A referência inicial de 50 ml por kg por dia é geral e deveria ser ajustada com o veterinário.
 - O modelo local é pequeno e eventualmente erra a escrita, e a validação existe justamente para isso.
+- A integração com o aplicativo móvel da CLYVO VET (Java) não foi feita nesta sprint. A IA é entregue por API REST (`/pets/{id}/alertas` e `/resumo-clinica`), pronta para o app consumir, e o dashboard web faz esse papel por enquanto.
 - O sistema apoia a decisão, **não faz diagnóstico**.
